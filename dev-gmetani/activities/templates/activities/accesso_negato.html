@@ -1,0 +1,52 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Diario — Accesso non consentito</title>
+    <link rel="stylesheet" href="{% static 'activities/diario.css' %}">
+</head>
+
+<body>
+
+    <div class="scheda stretta">
+
+        <nav>
+            <div class="sigillo">D</div>
+        </nav>
+
+        <div class="titolo-zona">
+            <h1 class="titolone media">Accesso<br>non consentito</h1>
+        </div>
+
+        <div class="corpo allineato-sx">
+            <h2>Servizio riservato al personale docente</h2>
+
+            <p>Diario raccoglie gli impegni didattici dal calendario di ateneo
+                e li trasferisce sul registro delle attività in Esse3.
+                Per questo motivo l'accesso è limitato al personale docente
+                e tecnico-amministrativo.</p>
+
+            <p>Il tuo account risulta autenticato correttamente presso l'ateneo,
+                ma l'affiliazione associata non rientra tra quelle abilitate
+                all'uso del servizio.</p>
+
+            {% if affiliazione %}
+            <div class="dettaglio">
+                Affiliazione rilevata: <code>{{ affiliazione }}</code><br>
+                Se ritieni si tratti di un errore, contatta il referente del servizio.
+            </div>
+            {% else %}
+            <div class="dettaglio">
+                Se ritieni si tratti di un errore, contatta il referente del servizio.
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,96 @@
+# Development service template (per-user).
+# Copied and substituted by scripts/add-user.sh — do not edit directly.
+# Placeholders: SERVICE_NAME, HOSTNAME, USERNAME, DEV_PORT
+#
+# Dev stacks publish their port directly on the host (no Traefik).
+# Access via:  http://HOSTNAME:DEV_PORT
+
+# services:
+#   diario-dev-gmetani:
+#     image: # TODO: replace with your image
+#     container_name: diario-dev-gmetani
+#     restart: unless-stopped
+#     env_file:
+#       - .env
+#     # volumes:
+#     #   - ./data:/app/data
+#     ports:
+#       # http://HOSTNAME:DEV_PORT → container port (change 8080 to your app's port)
+#       - "8101:8080"
+#     networks:
+#       - internal
+
+  # Uncomment if you need a database:
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: diario-dev-gmetani-db
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: diario
+  #     POSTGRES_USER: dev
+  #     POSTGRES_PASSWORD: dev
+  #   volumes:
+  #     - db_data:/var/lib/postgresql/data/
+  #   networks:
+  #     - internal
+
+# volumes:
+#   db_data:
+
+# networks:
+#   internal:
+#     internal: true
+
+networks:
+  internal_net:
+    driver: bridge
+    internal: true      # Django <-> MySQL, nessuna uscita
+  external_net:
+    driver: bridge      # solo Django, per le API Google
+
+services:
+  diario-dev-gmetani:
+    build: .
+    container_name: diario-dev-gmetani
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8080"
+    ports:
+      - "8101:8080"
+    networks:
+      - internal_net
+      - external_net
+    depends_on:
+      - db-dev-gmetani
+
+  db-dev-gmetani:
+    image: mysql:8
+    container_name: db-dev-gmetani
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - internal_net    # SOLO questa: il DB non esce su internet
+
+  diario-watcher-dev-gmetani:
+    build: .
+    container_name: diario-watcher-dev-gmetani
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: python manage.py run_watcher --interval 1
+    networks:
+      - internal_net
+      - external_net
+    depends_on:
+      - db-dev-gmetani
+
+volumes:
+  mysql_data:

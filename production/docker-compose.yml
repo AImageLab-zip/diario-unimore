@@ -1,0 +1,69 @@
+name: diario
+
+services:
+  diario:
+    build:
+      context: ../dev-gmetani
+      dockerfile: Dockerfile
+    container_name: diario
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000
+             --access-logfile - --error-logfile - --capture-output --log-level info"
+    networks:
+      - proxy-net      # ingresso da Traefik + uscita verso le API Google
+      - internal       # per parlare con MySQL
+    depends_on:
+      diario-db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.diario.rule=Host(`diario.ing.unimore.it`)"
+      - "traefik.http.routers.diario.entrypoints=websecure"
+      - "traefik.http.routers.diario.tls.certresolver=letsencrypt"
+      - "traefik.http.services.diario.loadbalancer.server.port=8000"
+      - "traefik.http.routers.diario.middlewares=shib-auth@file"
+
+  diario-db:
+    image: mysql:8.0
+    container_name: diario-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - internal       # SOLO questa
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      retries: 10
+  
+  diario-watcher:
+    build:
+      context: ../dev-gmetani
+      dockerfile: Dockerfile
+    container_name: diario-watcher
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: python manage.py run_watcher --interval 5
+    networks:
+      - proxy-net
+      - internal
+    depends_on:
+      diario-db:
+        condition: service_healthy
+
+networks:
+  proxy-net:
+    external: true     # già esistente sul server
+  internal:
+    internal: true
+
+volumes:
+  mysql_data:

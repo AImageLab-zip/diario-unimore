@@ -1,0 +1,298 @@
+:root {
+    --mattone: #b8391c;
+    --mattone-scuro: #962d14;
+    --bosco: #4a7345;
+    --bosco-scuro: #3a5c36;
+    --crema: #faf7f2;
+    --panna: #f0ebe3;
+    --nero: #221f1d;
+    --grigio: #6d6661;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--panna);
+    color: var(--nero);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+    padding: 2.5rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.scheda {
+    --accento: var(--mattone);
+    --accento-scuro: var(--mattone-scuro);
+    width: 100%;
+    max-width: 880px;
+    background: var(--crema);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(34, 31, 29, .12);
+}
+
+/* variante stretta per la pagina di rifiuto */
+.scheda.stretta {
+    max-width: 620px;
+}
+
+/* quando il calendario è collegato la scheda vira al verde */
+.scheda.collegato {
+    --accento: var(--bosco);
+    --accento-scuro: var(--bosco-scuro);
+}
+
+/* ─── navigazione ─────────────────────────────────── */
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.3rem 2.2rem;
+}
+
+.sigillo {
+    width: 34px;
+    height: 34px;
+    border: 1.5px solid var(--nero);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, serif;
+    font-size: .85rem;
+    font-style: italic;
+}
+
+.identita {
+    display: inline-flex;
+    align-items: center;
+    gap: .8rem;
+}
+
+.nome {
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--grigio);
+}
+
+.trattino {
+    color: var(--grigio);
+    opacity: .45;
+}
+
+.pillola {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    border: 1px solid var(--nero);
+    border-radius: 20px;
+    padding: .42rem 1.1rem;
+    color: var(--nero);
+    text-decoration: none;
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    transition: background .18s, color .18s, border-color .18s;
+}
+
+.pillola:hover {
+    background: var(--accento);
+    border-color: var(--accento);
+    color: var(--crema);
+}
+
+.freccia {
+    display: inline-block;
+    transition: transform .18s ease;
+}
+
+.pillola:hover .freccia {
+    transform: translateX(4px);
+}
+
+/* ─── titolo ──────────────────────────────────────── */
+
+.titolo-zona {
+    padding: 1rem 2.2rem 3rem;
+}
+
+.titolone {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accento);
+    font-size: clamp(5rem, 19vw, 11.5rem);
+    line-height: .9;
+    letter-spacing: -.03em;
+    margin: 0 0 .6rem;
+    transition: color .3s;
+}
+
+/* titolo ridotto per la pagina di rifiuto */
+.titolone.media {
+    font-size: clamp(2.6rem, 9vw, 4.6rem);
+}
+
+.sottotitolo {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--grigio);
+    padding-left: .5rem;
+    border-top: 1px solid rgba(34, 31, 29, .12);
+    padding-top: .7rem;
+    max-width: 22rem;
+}
+
+/* ─── fascia informativa ──────────────────────────── */
+
+.fascia {
+    background: var(--crema);
+    border-top: 1px solid rgba(34, 31, 29, .1);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    padding: 1.6rem 2.2rem;
+    text-align: center;
+}
+
+.fascia div {
+    font-size: .76rem;
+    color: var(--grigio);
+    line-height: 1.5;
+}
+
+.fascia .pittogramma {
+    color: var(--accento);
+    font-size: 1.05rem;
+    margin-bottom: .3rem;
+    transition: color .3s;
+}
+
+/* ─── corpo ───────────────────────────────────────── */
+
+.corpo {
+    background: var(--panna);
+    padding: 2.4rem 2.2rem 2.8rem;
+    text-align: center;
+}
+
+.corpo.allineato-sx {
+    text-align: left;
+}
+
+.corpo h2 {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.5rem;
+    margin: 0 0 1rem;
+}
+
+.corpo p {
+    font-size: .92rem;
+    color: var(--grigio);
+    max-width: 50ch;
+    margin: 0 auto 1.8rem;
+}
+
+.corpo.allineato-sx p {
+    margin-left: 0;
+    margin-bottom: 1rem;
+}
+
+/* ─── azioni ──────────────────────────────────────── */
+
+.btn {
+    display: inline-block;
+    padding: .82rem 2rem;
+    background: var(--bosco);
+    color: var(--crema);
+    text-decoration: none;
+    border-radius: 22px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    transition: background .15s;
+}
+
+.btn:hover {
+    background: var(--bosco-scuro);
+}
+
+.secondario {
+    display: inline-block;
+    padding: .82rem 2rem;
+    background: var(--mattone);
+    color: var(--crema);
+    text-decoration: none;
+    border-radius: 22px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    transition: background .15s;
+}
+
+.secondario:hover {
+    background: var(--mattone-scuro);
+}
+
+.stato {
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 1.35rem;
+    color: var(--bosco);
+    margin: 0 0 1rem;
+}
+
+/* ─── dettaglio tecnico (pagina di rifiuto) ───────── */
+
+.dettaglio {
+    font-size: .82rem;
+    color: var(--grigio);
+    border-top: 1px solid rgba(34, 31, 29, .12);
+    padding-top: 1rem;
+    margin-top: 1.4rem;
+}
+
+code {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    background: rgba(184, 57, 28, .08);
+    padding: .1rem .35rem;
+    border-radius: 3px;
+    font-size: .85em;
+}
+
+/* ─── adattamento mobile ──────────────────────────── */
+
+@media (max-width: 640px) {
+    nav {
+        padding: 1rem 1.3rem;
+        flex-wrap: wrap;
+        gap: .8rem;
+    }
+
+    .titolo-zona,
+    .fascia,
+    .corpo {
+        padding-left: 1.3rem;
+        padding-right: 1.3rem;
+    }
+
+    .fascia {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}

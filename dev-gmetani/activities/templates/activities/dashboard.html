@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Diario — Registro attività didattiche</title>
+    <link rel="stylesheet" href="{% static 'activities/diario.css' %}">
+</head>
+
+<body>
+
+    <div class="scheda{% if collegato %} collegato{% endif %}">
+
+        <nav>
+            <div class="sigillo">D</div>
+            <div class="identita">
+                <span class="nome">{{ user.get_username }}</span>
+                <span class="trattino">—</span>
+                <a class="pillola" href="{% url 'logout' %}">
+                    Logout
+                    <span class="freccia">→</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="titolo-zona">
+            <h1 class="titolone">Diario</h1>
+            <div class="sottotitolo">Registro attività didattiche</div>
+        </div>
+
+        <div class="fascia">
+            <div>
+                <div class="pittogramma">◷</div>
+                Lettura automatica<br>degli impegni di calendario
+            </div>
+            <div>
+                <div class="pittogramma">◆</div>
+                Classificazione secondo<br>le categorie del registro
+            </div>
+            <div>
+                <div class="pittogramma">⇄</div>
+                Attività rese disponibili<br>su Esse3
+            </div>
+        </div>
+
+        <div class="corpo">
+            {% if not collegato %}
+            <h2>Collega il tuo calendario</h2>
+            <p>Gli impegni vengono letti dal tuo Google Calendar di ateneo,
+                classificati automaticamente e resi disponibili su Esse3.
+                L'accesso è in sola lettura e revocabile in qualsiasi momento.</p>
+            <a class="btn" href="{% url 'collega_calendar' %}">Collega il calendario</a>
+            {% else %}
+            <p class="stato">Calendario collegato</p>
+            <p>La sincronizzazione avviene automaticamente in background.
+                Gli impegni di carattere personale vengono riconosciuti
+                ed esclusi dalla sincronizzazione.</p>
+            <a class="secondario" href="{% url 'scollega_calendar' %}">Scollega</a>
+            {% endif %}
+        </div>
+
+    </div>
+
+</body>
+
+</html>

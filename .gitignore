@@ -1,0 +1,15 @@
+# Segreti — mai committare
+.env
+credentials.json
+token.json
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Django
+staticfiles/
+*.sqlite3
+
+# Infrastruttura
+.dev-ports
