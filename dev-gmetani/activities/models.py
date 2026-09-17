@@ -3,11 +3,12 @@ from django.db import models
 
 
 class GoogleCalendarCredential(models.Model):
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='google_credential',
+        related_name='google_credentials',
     )
+    google_email = models.EmailField()
     refresh_token = models.TextField()
     token = models.TextField(blank=True)
     token_uri = models.CharField(max_length=255)
@@ -17,8 +18,17 @@ class GoogleCalendarCredential(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'google_email'],
+                name='unique_google_account_per_user',
+            )
+        ]
+        ordering = ['google_email']
+
     def __str__(self):
-        return f"Credenziali Google di {self.user}"
+        return f"{self.google_email} ({self.user})"
 
 
 class AcademicActivity(models.Model):
@@ -34,6 +44,12 @@ class AcademicActivity(models.Model):
         on_delete=models.CASCADE,
         related_name='activities',
     )
+    credential = models.ForeignKey(
+        GoogleCalendarCredential,
+        on_delete=models.CASCADE,
+        related_name='activities',
+        null=True, blank=True,
+    )
     google_event_id = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -48,11 +64,12 @@ class AcademicActivity(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'google_event_id'],
-                name='unique_event_per_user',
+                fields=['credential', 'google_event_id'],
+                name='unique_event_per_credential',
             )
         ]
         indexes = [models.Index(fields=['user', 'start_time'])]
+        ordering = ['-start_time']
 
     def save(self, *args, **kwargs):
         if self.start_time and self.end_time:

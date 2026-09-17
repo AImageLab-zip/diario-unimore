@@ -9,9 +9,8 @@ from .ai_service import classify_activity
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 
-def get_calendar_service_for(user):
-    """Costruisce il client Calendar usando le credenziali salvate per l'utente."""
-    cred = getattr(user, 'google_credential', None)
+def get_calendar_service_for(cred):
+    """Costruisce il client Calendar a partire da una credenziale salvata."""
     if cred is None:
         return None
 
@@ -26,7 +25,8 @@ def get_calendar_service_for(user):
     return build('calendar', 'v3', credentials=creds)
 
 
-def sync_events_from_google(user, service, calendar_id='primary'):
+def sync_events_from_google(cred, service, calendar_id='primary'):
+    """Sincronizza gli eventi dell'account associato a `cred`."""
     time_min = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     events_result = service.events().list(
         calendarId=calendar_id,
@@ -46,7 +46,7 @@ def sync_events_from_google(user, service, calendar_id='primary'):
         # 1. Gestione cancellazioni
         if event.get('status') == 'cancelled':
             deleted, _ = AcademicActivity.objects.filter(
-                user=user, google_event_id=google_id
+                credential=cred, google_event_id=google_id
             ).delete()
             if deleted:
                 deleted_count += 1
@@ -63,7 +63,7 @@ def sync_events_from_google(user, service, calendar_id='primary'):
         description = event.get('description', '')
 
         activity = AcademicActivity.objects.filter(
-            user=user, google_event_id=google_id
+            credential=cred, google_event_id=google_id
         ).first()
 
         # 2. Evento esistente: verifica modifiche
@@ -97,7 +97,8 @@ def sync_events_from_google(user, service, calendar_id='primary'):
             initial_status = 'IGNORED' if predicted_category == "NON_ACCADEMICO" else 'PENDING'
 
             AcademicActivity.objects.create(
-                user=user,
+                user=cred.user,
+                credential=cred,
                 google_event_id=google_id,
                 title=title,
                 description=description,

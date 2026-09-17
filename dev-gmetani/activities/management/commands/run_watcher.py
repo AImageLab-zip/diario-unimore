@@ -7,7 +7,7 @@ from activities.calendar_service import get_calendar_service_for, sync_events_fr
 
 
 class Command(BaseCommand):
-    help = "Controlla periodicamente Google Calendar di ogni utente collegato e aggiorna MySQL"
+    help = "Controlla periodicamente Google Calendar di ogni account collegato e aggiorna MySQL"
 
     def add_arguments(self, parser):
         parser.add_argument('--interval', type=int, default=5, help="Intervallo in minuti")
@@ -20,21 +20,22 @@ class Command(BaseCommand):
 
         while True:
             credenziali = GoogleCalendarCredential.objects.select_related('user')
+
             if not credenziali.exists():
-                self.stdout.write("Nessun utente ha collegato il calendario.")
+                self.stdout.write("Nessun account collegato.")
 
             for cred in credenziali:
-                user = cred.user
+                etichetta = f"{cred.user} → {cred.google_email}"
                 try:
-                    service = get_calendar_service_for(user)
+                    service = get_calendar_service_for(cred)
                     if service is None:
                         continue
-                    up, rm = sync_events_from_google(user, service)
+                    up, rm = sync_events_from_google(cred, service)
                     self.stdout.write(self.style.SUCCESS(
-                        f"{user}: {up} aggiornati/creati, {rm} eliminati."
+                        f"{etichetta}: {up} aggiornati/creati, {rm} eliminati."
                     ))
                 except Exception as e:
-                    # un token revocato non deve bloccare gli altri utenti
-                    self.stderr.write(self.style.ERROR(f"Errore per {user}: {e}"))
+                    # un token revocato non deve bloccare gli altri account
+                    self.stderr.write(self.style.ERROR(f"{etichetta}: errore — {e}"))
 
             time.sleep(interval_seconds)

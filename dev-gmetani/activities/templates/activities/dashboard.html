@@ -11,13 +11,31 @@
 
 <body>
 
-    <div class="scheda{% if collegato %} collegato{% endif %}">
+    <div class="scheda{% if selezionata %} collegato{% endif %}">
 
         <nav>
             <div class="sigillo">D</div>
+
             <div class="identita">
-                <span class="nome">{{ user.get_username }}</span>
+                <div class="menu">
+                    <button class="pillola" type="button" id="apri-menu">
+                        Calendario
+                        <span class="chevron">▾</span>
+                    </button>
+
+                    <div class="tendina" id="tendina">
+                        {% for c in credenziali %}
+                        <a class="voce{% if selezionata and c.pk == selezionata.pk %} attiva{% endif %}"
+                            href="?cal={{ c.pk }}">{{ c.google_email }}</a>
+                        {% empty %}
+                        <div class="voce vuota">Nessun calendario</div>
+                        {% endfor %}
+                        <a class="voce aggiungi" href="{% url 'collega_calendar' %}">+ Collega un account</a>
+                    </div>
+                </div>
+
                 <span class="trattino">—</span>
+
                 <a class="pillola" href="{% url 'logout' %}">
                     Logout
                     <span class="freccia">→</span>
@@ -46,22 +64,39 @@
         </div>
 
         <div class="corpo">
-            {% if not collegato %}
-            <h2>Collega il tuo calendario</h2>
-            <p>Gli impegni vengono letti dal tuo Google Calendar di ateneo,
-                classificati automaticamente e resi disponibili su Esse3.
-                L'accesso è in sola lettura e revocabile in qualsiasi momento.</p>
-            <a class="btn" href="{% url 'collega_calendar' %}">Collega il calendario</a>
-            {% else %}
+            {% if selezionata %}
             <p class="stato">Calendario collegato</p>
+            <p class="indirizzo">{{ selezionata.google_email }}</p>
             <p>La sincronizzazione avviene automaticamente in background.
                 Gli impegni di carattere personale vengono riconosciuti
                 ed esclusi dalla sincronizzazione.</p>
-            <a class="secondario" href="{% url 'scollega_calendar' %}">Scollega</a>
+            <a class="secondario" href="{% url 'scollega_calendar' selezionata.pk %}">Scollega</a>
+            {% else %}
+            <h2>Collega il tuo calendario</h2>
+            <p>Gli impegni vengono letti dal tuo Google Calendar di ateneo,
+                classificati automaticamente e resi disponibili su Esse3.
+                Puoi collegare più account: li trovi nel menu in alto.</p>
+            <a class="btn" href="{% url 'collega_calendar' %}">Collega il calendario</a>
             {% endif %}
         </div>
 
     </div>
+
+    <script>
+        const bottone = document.getElementById('apri-menu');
+        const tendina = document.getElementById('tendina');
+
+        bottone.addEventListener('click', (e) => {
+            e.stopPropagation();
+            tendina.classList.toggle('aperta');
+            bottone.classList.toggle('attivo');
+        });
+
+        document.addEventListener('click', () => {
+            tendina.classList.remove('aperta');
+            bottone.classList.remove('attivo');
+        });
+    </script>
 
 </body>
 

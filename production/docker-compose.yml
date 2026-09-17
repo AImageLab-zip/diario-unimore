@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: python manage.py run_watcher --interval 5
+    command: python manage.py run_watcher --interval 1
     networks:
       - proxy-net
       - internal

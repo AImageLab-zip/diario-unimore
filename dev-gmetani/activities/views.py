@@ -1,8 +1,10 @@
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
-from google_auth_oauthlib.flow import Flow
 from django.contrib.auth import logout as django_logout
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+
 from .models import GoogleCalendarCredential
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
@@ -18,8 +20,18 @@ def _build_flow():
 
 @login_required
 def dashboard(request):
-    collegato = hasattr(request.user, 'google_credential')
-    return render(request, 'activities/dashboard.html', {'collegato': collegato})
+    credenziali = list(request.user.google_credentials.all())
+
+    selezionata = None
+    pk = request.GET.get('cal')
+    if pk:
+        selezionata = next((c for c in credenziali if str(c.pk) == pk), None)
+
+    return render(request, 'activities/dashboard.html', {
+        'credenziali': credenziali,
+        'selezionata': selezionata,
+        'collegato': bool(credenziali),
+    })
 
 
 @login_required
@@ -27,9 +39,8 @@ def collega_calendar(request):
     flow = _build_flow()
     auth_url, state = flow.authorization_url(
         access_type='offline',
-        prompt='consent',
+        prompt='consent select_account',   # forza la scelta dell'account
         include_granted_scopes='true',
-        #hd='unimore.it',         # mostra solo account del dominio di ateneo
     )
     request.session['oauth_state'] = state
     request.session['code_verifier'] = flow.code_verifier
@@ -43,8 +54,12 @@ def oauth2callback(request):
     flow.fetch_token(authorization_response=request.build_absolute_uri())
     c = flow.credentials
 
+    servizio = build('calendar', 'v3', credentials=c)
+    email = servizio.calendarList().get(calendarId='primary').execute()['id']
+
     GoogleCalendarCredential.objects.update_or_create(
         user=request.user,
+        google_email=email,
         defaults={
             'refresh_token': c.refresh_token,
             'token': c.token,
@@ -60,11 +75,10 @@ def oauth2callback(request):
 
 
 @login_required
-def scollega_calendar(request):
-    GoogleCalendarCredential.objects.filter(user=request.user).delete()
+def scollega_calendar(request, pk):
+    cred = get_object_or_404(GoogleCalendarCredential, pk=pk, user=request.user)
+    cred.delete()
     return redirect('dashboard')
-
-
 
 
 @login_required
