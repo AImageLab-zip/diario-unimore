@@ -1,4 +1,8 @@
 # Diario
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/fc4b8017-39fb-47ba-b366-72c88378627f" alt="La dashboard di Diario" width="700">
+</p>
+---
 
 Applicazione Django che legge gli impegni dal Google Calendar dei docenti,
 li classifica automaticamente nelle categorie del registro attività di Esse3
@@ -43,6 +47,9 @@ Il flusso completo, dal punto di vista di un docente:
 
 L'interfaccia web serve **solo** a collegare e scollegare i calendari: i docenti
 consultano le attività su Esse3, non qui.
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/6f5254c8-597a-4200-9df7-4ae1a5711a4c" alt="La dashboard di Diario" width="500">
+</p>
 
 ---
 
@@ -103,8 +110,8 @@ Django e il watcher stanno su entrambe perché devono parlare con il database
 *e* con internet. **Nessuna porta è pubblicata sull'host**: l'unico ingresso è
 Traefik, che termina il TLS con un certificato Let's Encrypt.
 
-In **sviluppo** la stack bypassa Traefik e pubblica la porta `8101` direttamente
-sull'host (`http://diario.ing.unimore.it:8101`). Shibboleth non è disponibile in
+In **sviluppo** la stack bypassa Traefik e pubblica la porta `<port>` direttamente
+sull'host (`http://diario.ing.unimore.it:<port>`). Shibboleth non è disponibile in
 sviluppo.
 
 ---
@@ -159,7 +166,7 @@ Uguale, con queste differenze:
 DEBUG=True
 ALLOWED_HOSTS=diario.ing.unimore.it,localhost,127.0.0.1
 DB_HOST=db-dev-gmetani
-GOOGLE_REDIRECT_URI=http://localhost:8101/oauth2callback/
+GOOGLE_REDIRECT_URI=http://localhost:<port>/oauth2callback/
 OAUTHLIB_INSECURE_TRANSPORT=1
 ```
 
@@ -183,8 +190,8 @@ docker compose exec diario-dev-gmetani python manage.py migrate
 docker compose exec diario-dev-gmetani python manage.py createsuperuser
 ```
 
-Il servizio risponde su `http://diario.ing.unimore.it:8101` — oppure su
-`http://localhost:8101` se usi il port forwarding di VS Code Remote.
+Il servizio risponde su `http://diario.ing.unimore.it:<port>` — oppure su
+`http://localhost:port` se usi il port forwarding di VS Code Remote.
 
 In sviluppo il codice è **montato come volume** (`.:/app`), quindi le modifiche
 sono immediate e `runserver` ricarica da solo. Serve ricostruire solo se cambi
@@ -207,8 +214,12 @@ come da `command` nel compose.
 Verifica che tutto sia in piedi:
 
 ```bash
-docker compose ps        # tre container Up, diario-db healthy
+docker compose ps        # tre container UP, diario-db healthy
 ```
+
+<p align="center">
+   <img width="1017" height="83" alt="image" src="https://github.com/user-attachments/assets/e9af9187-c0dc-478a-bcaa-311f98dfe737" />
+</p>
 
 ---
 
@@ -277,25 +288,162 @@ Ogni utente può collegare **più account Google**: il modello
 - Dietro Traefik serve `SECURE_PROXY_SSL_HEADER` in `settings.py`, altrimenti
   `request.build_absolute_uri()` produce `http://` e il token scambio fallisce.
 
-### Progetto Google Cloud
+---
 
-> **Questo è il punto aperto più importante del progetto.**
+## Google Cloud Console
 
-Al momento della scrittura, l'applicazione usa un progetto Google Cloud
-**personale in modalità test**. Questo comporta due limiti che impediscono
-l'uso reale da parte dei docenti:
+L'applicazione accede a Google Calendar tramite OAuth 2.0. Tutta la
+configurazione lato Google vive in un progetto su
+[Google Cloud Console](https://console.cloud.google.com), ed è il punto in cui
+più facilmente le cose si rompono: vale la pena leggere questa sezione prima
+di toccare qualsiasi cosa.
 
-- solo gli account inseriti manualmente nella lista utenti di test possono
-  autorizzare l'applicazione;
-- i refresh token **scadono dopo 7 giorni**, interrompendo la sincronizzazione.
+### Lo stato attuale e perché è un problema
 
-La soluzione è creare il progetto **dentro l'organizzazione `unimore.it`** e
-configurarlo come applicazione **Internal**: in quel caso non serve la verifica
-di Google, non ci sono liste di autorizzazione e i token non scadono.
-Richiede un account con permessi sul Workspace di ateneo.
+Il progetto in uso è **personale** e la sua schermata di consenso è in
+**modalità test**. Questo comporta due limiti che rendono il servizio
+inutilizzabile nella pratica:
 
-Una volta ottenuto il nuovo progetto, basta sostituire `credentials.json`:
-il codice non cambia.
+- **Lista chiusa di utenti.** Solo gli account inseriti a mano tra gli "utenti
+  di prova" possono autorizzare l'applicazione. Chiunque altro riceve
+  "Accesso bloccato: questa app non ha completato la procedura di verifica di
+  Google". Il limite è di 100 utenti.
+- **Token che scadono dopo 7 giorni.** In modalità test Google invalida i
+  refresh token dopo una settimana. Il watcher smette di sincronizzare e ogni
+  docente deve ricollegare il calendario. Non è un bug dell'applicazione.
+
+Per superarli **non** serve chiedere la verifica a Google: quella procedura
+richiede privacy policy pubblica, dominio verificato, un video dimostrativo e
+settimane di attesa, perché `calendar.readonly` è considerato uno scope
+sensibile. Per un servizio di ateneo è la strada sbagliata.
+
+### La soluzione: un progetto Internal
+
+Se il progetto Cloud appartiene all'**organizzazione `unimore.it`**, la
+schermata di consenso può essere configurata come **Internal**. In quel caso:
+
+| | Test (attuale) | Internal (obiettivo) |
+|---|---|---|
+| Chi può autorizzare | solo utenti in lista | qualsiasi account dell'organizzazione |
+| Verifica Google | non richiesta | non richiesta |
+| Scadenza refresh token | 7 giorni | nessuna |
+| Avviso "app non verificata" | sì | no |
+
+L'opzione Internal **compare solo per progetti che appartengono a
+un'organizzazione**: su un progetto personale è disabilitata, e non esiste
+modo di aggirarlo lato codice. Serve un account con permessi sul Google
+Workspace di ateneo — quindi è una richiesta da fare al referente, non
+qualcosa che si risolve da soli.
+
+### Creare il progetto da zero
+
+1. Accedere a `console.cloud.google.com` con un account `@unimore.it`.
+
+2. Aprire il selettore dei progetti in alto e scegliere **Nuovo progetto**.
+   Alla voce *Organizzazione* (o *Località*) selezionare `unimore.it` invece di
+   "Nessuna organizzazione". **È il passaggio determinante**: se il progetto
+   nasce senza organizzazione, l'opzione Internal non sarà disponibile e
+   bisognerà ricominciare.
+
+3. Da *API e servizi → Libreria*, cercare **Google Calendar API** e attivarla.
+
+4. Da *API e servizi → Schermata consenso OAuth* — nella nuova interfaccia
+   *Google Auth Platform → Pubblico* — selezionare **Internal** come tipo di
+   utente, poi compilare nome dell'applicazione (`Diario`), email di supporto e
+   email di contatto.
+
+5. Nella sezione degli ambiti — *Accesso ai dati* nella nuova interfaccia —
+   aggiungere lo scope:
+
+```
+   https://www.googleapis.com/auth/calendar.readonly
+```
+
+   Non aggiungere scope più ampi di quelli necessari: l'applicazione legge il
+   calendario e non scrive nulla.
+
+6. Da *Credenziali* — o *Client* — scegliere **Crea credenziali → ID client
+   OAuth**, poi **Applicazione web** come tipo. Alla voce *URI di
+   reindirizzamento autorizzati* inserire esattamente:
+
+```
+   https://diario.ing.unimore.it/oauth2callback/
+```
+
+   Per poter sviluppare in locale, aggiungere come secondo URI:
+
+```
+   http://localhost:port/oauth2callback/
+```
+
+7. Scaricare il file JSON e salvarlo come `dev-gmetani/credentials.json`,
+   sostituendo quello esistente. **Il codice non va modificato**: legge il
+   percorso da `GOOGLE_CREDENTIALS_PATH` in `settings.py`.
+
+### Verificare di aver fatto la cosa giusta
+
+Apri `credentials.json` e guarda la prima chiave:
+
+- `"web"` → corretto, è un client di tipo applicazione web;
+- `"installed"` → **sbagliato**, è un client desktop. Non supporta il flusso
+  con redirect verso un URL esterno e l'applicazione fallirà. Va creato un
+  nuovo client di tipo web.
+
+### Cose che fanno fallire il flusso OAuth
+
+Gli errori più comuni, con il loro sintomo esatto:
+
+**`Error 400: redirect_uri_mismatch`**
+L'URI che l'applicazione invia non corrisponde a nessuno di quelli registrati.
+La corrispondenza è letterale: `http` contro `https`, la porta, e anche la
+**barra finale** contano. Confronta il valore di `GOOGLE_REDIRECT_URI` nel
+`.env` con la lista in Console, carattere per carattere. Dopo una modifica
+Google avvisa che l'applicazione delle impostazioni può richiedere *da cinque
+minuti a qualche ora*: se hai appena salvato, aspetta prima di concludere che
+sia sbagliato.
+
+**`invalid_grant: Missing code verifier`**
+La libreria usa PKCE: genera un valore casuale, ne manda l'hash nella prima
+richiesta e deve rimandare l'originale nella seconda. Poiché
+`collega_calendar` e `oauth2callback` creano due oggetti `Flow` distinti, il
+verifier va salvato in sessione dal primo e riassegnato al secondo. È già
+gestito in `views.py`: se tocchi quelle viste, non rimuoverlo.
+
+**Il refresh token non arriva**
+Google lo rilascia solo con `access_type='offline'` **e** `prompt='consent'`.
+Senza, ottieni un access token valido un'ora e la sincronizzazione muore quasi
+subito senza errori evidenti.
+
+**Il selettore dell'account non compare quando se ne collega un secondo**
+Serve `prompt='consent select_account'`, altrimenti Google riusa
+silenziosamente l'account già autenticato nel browser.
+
+**`redirect_uri` con `http://` invece di `https://`**
+Dietro Traefik, `request.build_absolute_uri()` produce lo schema sbagliato se
+manca `SECURE_PROXY_SSL_HEADER` in `settings.py`. Non rimuoverlo.
+
+**In sviluppo: `InsecureTransportError`**
+`google-auth-oauthlib` rifiuta OAuth su HTTP. In sviluppo serve
+`OAUTHLIB_INSECURE_TRANSPORT=1` nel `.env`. **Mai in produzione.**
+
+### Branding
+
+Il nome che i docenti vedono nella schermata di consenso ("Continua su …") si
+imposta in *Google Auth Platform → Branding*. È il nome dell'applicazione, non
+quello del progetto Cloud: vale la pena che dica `Diario` e non il nome tecnico
+del progetto.
+
+Il logo è opzionale. Su un'app External il caricamento di un logo può far
+scattare il processo di verifica di Google; su un'app Internal no.
+
+### Limitare gli account proponibili
+
+La vista `collega_calendar` può passare il parametro `hd='unimore.it'`, che
+filtra il selettore degli account mostrando solo quelli del dominio di ateneo.
+Due avvertenze: è un **suggerimento**, non un vincolo — un utente può
+comunque autenticarsi con un altro account, quindi se serve una garanzia va
+verificata l'email nel callback; e se il progetto deve permettere anche il
+collegamento di account personali, questo filtro lo impedisce.
 
 ---
 
@@ -313,6 +461,9 @@ non in un crash** — ma anche che errori silenziosi possono passare inosservati
 
 Le categorie sono quelle del registro Esse3 e vanno tenute allineate se l'ateneo
 le modifica.
+<p align="center">
+<img width="1571" height="654" alt="image" src="https://github.com/user-attachments/assets/f7c76828-b439-43a2-86dd-c1bd6fe7916d" />
+</p>
 
 ---
 
